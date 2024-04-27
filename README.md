@@ -77,7 +77,7 @@ Similarly, the group based access can be granted by creating a group `xorg`
 group.  Finally, we can grant the access to the cookie for a whole group in the
 `xx` script by adding:
 
-```
+``` sh
 chgrp xorg $XAUTHORITY
 chmod 640 $XAUTHORITY
 ```
