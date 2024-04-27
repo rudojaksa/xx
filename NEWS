@@ -1,0 +1,2 @@
+0.4 - better dbus-daemon, solves missing /run/user/uid
+    - further simplified script
