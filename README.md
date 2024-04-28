@@ -7,9 +7,9 @@ simplified customization-friendly alternative to the startx).
 <tt>boot to console</tt> &nbsp;&rarr;&nbsp; <tt>login</tt> &nbsp;&rarr;&nbsp; <tt>run xx</tt>
 &nbsp; &nbsp; &nbsp; </h3>
 
-<div align=right>
-
-</div>
+<font size="30">
+oaethoaenth tnaohe nth eoatn
+</font>
 
 The `xx` name is convenient when it has to be typed from a misconfigured
 keyboard after arbitarry boot problem.  Single `x` would be even simplier, but it
