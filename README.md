@@ -3,9 +3,13 @@
 Minimal script to start the X server manually from the text console (a lot
 simplified customization-friendly alternative to the startx).
 
-<p style="text-align: center; font-size: 22px;">
+<p style="font-size: 22px;"><center>
 <tt>boot to console</tt> &nbsp;&rarr;&nbsp; <tt>login</tt> &nbsp;&rarr;&nbsp; <tt>run xx</tt>
-&nbsp; &nbsp; &nbsp; </p>
+&nbsp; &nbsp; &nbsp; </center></p>
+
+<div align=right>
+
+</div>
 
 The `xx` name is convenient when it has to be typed from a misconfigured
 keyboard after arbitarry boot problem.  Single `x` would be even simplier, but it
@@ -77,7 +81,7 @@ Similarly, the group based access can be granted by creating a group `xorg`
 group.  Finally, we can grant the access to the cookie for a whole group in the
 `xx` script by adding:
 
-``` sh
+```
 chgrp xorg $XAUTHORITY
 chmod 640 $XAUTHORITY
 ```
