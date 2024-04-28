@@ -4,10 +4,9 @@ Minimal script to start the X server manually from the text console (a lot
 simplified customization-friendly alternative to the startx).
 
 <h3 align="center">
-<tt>boot to console</tt> &nbsp;&rarr;&nbsp; <tt>login</tt> &nbsp;&rarr;&nbsp; <tt>run xx</tt>
-&nbsp; &nbsp; &nbsp; </h3>
-
-$${\color{red}Red oaeao oae}$$
+<tt>&nbsp;boot to console&nbsp;</tt> &nbsp;&rarr;&nbsp;
+<tt>&nbsp;login&nbsp;</tt> &nbsp;&rarr;&nbsp;
+<tt>&nbsp;run xx&nbsp;</tt> &nbsp; &nbsp; &nbsp; </h3>
 
 The `xx` name is convenient when it has to be typed from a misconfigured
 keyboard after arbitarry boot problem.  Single `x` would be even simplier, but it
