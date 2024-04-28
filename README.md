@@ -3,9 +3,9 @@
 Minimal script to start the X server manually from the text console (a lot
 simplified customization-friendly alternative to the startx).
 
-<p style="font-size: 22px;"><center>
+<center>
 <tt>boot to console</tt> &nbsp;&rarr;&nbsp; <tt>login</tt> &nbsp;&rarr;&nbsp; <tt>run xx</tt>
-&nbsp; &nbsp; &nbsp; </center></p>
+&nbsp; &nbsp; &nbsp; </center>
 
 <div align=right>
 
