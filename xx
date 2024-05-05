@@ -1,39 +1,48 @@
 #!/bin/bash
 # script to start the X manually by the user from the text console
 
-# 1. set our runtime/logdir (for the X display :0), either /tmp/X0 or /tmp/X0-user
-XDIR=/tmp/X0; rm -rf $XDIR
-if test -e "$XDIR"; then XDIR=/tmp/X0-$USER; rm -rf $XDIR; fi
+# 1. set our runtime/logdir for the X display :0
+XDIR=/tmp/X0
 mkdir -p $XDIR
 
 # 2. session dbus for a browser to exchange links with apps and own windows
 export DBUS_SESSION_BUS_ADDRESS="unix:path=$XDIR/dbus"
 kill -9 `ps x | grep dbus-daemon | grep $DBUS_SESSION_BUS_ADDRESS | xargs | cut -d ' ' -f 1` 2>/dev/null
-dbus-daemon --session --nofork --nopidfile --nosyslog --address=$DBUS_SESSION_BUS_ADDRESS &> $XDIR/dbus.log &
+echo "dbus-daemon --session --nofork --nopidfile --nosyslog --address=$DBUS_SESSION_BUS_ADDRESS &> $XDIR/dbus.log &" > $XDIR/dbusrc
+bash $XDIR/dbusrc &
 
-# 3. create and save authentication cookie and provide XAUTHORITY envvar
+# 3. audio serser to accompany the display server
+pkill -9 pulseaudio
+mkdir -p /tmp/pulse
+echo "XDG_CONFIG_HOME=/tmp PULSE_RUNTIME_PATH=/tmp/pulse pulseaudio --exit-idle-time=-1 --daemonize=no --log-time --log-target=stderr 2>/tmp/pulse/pulse.log &" > /tmp/pulse/pulserc
+#G# echo "sleep 1; chgrp xorg /tmp/pulse; chmod 750 /tmp/pulse" >> /tmp/pulse/pulserc
+#H# echo "sleep 1; chmod 755 /tmp/pulse" >> /tmp/pulse/pulserc
+bash /tmp/pulse/pulserc &
+
+# 4. create and save authentication cookie and provide XAUTHORITY envvar
 export XAUTHORITY=$XDIR/xauthority
 touch $XAUTHORITY
 xauth -q -f $XAUTHORITY add :0 . `/usr/bin/mcookie` # auto chmod 600
+#G# chgrp xorg $XAUTHORITY; chmod 640 $XAUTHORITY
+#H# chmod 644 $XAUTHORITY
 
-# 4. move the users X server log to our runtime dir
+# 5. move the users X server log to our runtime dir
 OLDLOG=~/.local/share/xorg/Xorg.0.log
 mkdir -p `dirname $OLDLOG`
-if test -f $OLDLOG; then rm -f $OLDLOG; fi
-ln -sf $XDIR/xorg.log $OLDLOG
+if test -f $OLDLOG; then rm -f $OLDLOG; fi; ln -sf $XDIR/xorg.log $OLDLOG
 
-# 5. create run-time "xinitrc" script
+# 6. create run-time xinitrc script
 XINITRC=$XDIR/xinitrc
 cp ~/.xinitrc $XINITRC
 
-# 6. run the X server
-XORG=/usr/lib/xorg/Xorg
-XOUT=$XDIR/xorg-stdout.log
+# 7. run the X server
 VT=vt`tty | grep -oE '[0-9]+$'` # identify VT
-xinit $XINITRC -- $XORG -nolisten tcp :0 $VT -keeptty -auth $XAUTHORITY > $XOUT 2>&1
+xinit $XINITRC -- /usr/lib/xorg/Xorg -nolisten tcp :0 $VT -keeptty -auth $XAUTHORITY > $XDIR/xorg.stdout 2>&1
 
-# 7. cleanup after the Xorg is closed
+# 8. cleanup after the Xorg is closed
 kill -9 `ps x | grep dbus-daemon | grep $DBUS_SESSION_BUS_ADDRESS | xargs | cut -d ' ' -f 1`
+pkill -9 pulseaudio
+rm -rvf /tmp/pulse /tmp/pulse-*
 rm -rvf /tmp/.X0-lock $XDIR
 
 # R.Jaksa 2023,2024

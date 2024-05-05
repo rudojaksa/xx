@@ -9,22 +9,22 @@ simplified customization-friendly alternative to the startx).
 <tt>&nbsp;run xx&nbsp;</tt> &nbsp; &nbsp; &nbsp; </h3>
 
 The `xx` name is convenient when it has to be typed from a misconfigured
-keyboard after arbitarry boot problem.  Single `x` would be even simplier, but it
-would be also prone to launch unintentionaly.  The `xx` script itself does:
+keyboard after arbitrary boot problem.  Single `x` would be even simpler, but it
+would be also prone to launch unintentionally.  The `xx` script itself does:
 
 1. Creates the session data directory `/tmp/X0`.
 2. Starts user's dbus for the browser to work correctly.
-3. Sets the xauthority authentication cookie for X.
-4. Moves the `Xorg.0.log` to `/tmp/X0`.
-5. Makes temporary xinitrc to start a window manager.
-6. Runs the X server.
-7. Removes all session data after the X is closed.
+3. Starts user's pulseaudio sound server.
+4. Sets the xauthority authentication cookie for X.
+5. Moves the `Xorg.0.log` to `/tmp/X0`.
+6. Makes temporary xinitrc to start a window manager.
+7. Runs the X server.
+8. Removes all session data after the X is closed.
 
 #### 1. `/tmp/X0` - runtime data and logs
 
-All X runtime files will be created or redirected into `/tmp/X0` (or to the
-`/tmp/X0-user`).  For every new session the old stalled directory will be
-removed, and new one created.
+All X runtime files will be created or redirected into `/tmp/X0`.  The `X0`
+stands for the "X display 0".  Main runtime files will be:
 
 ```
 /tmp/X0/dbus		-> dbus socket file
@@ -32,10 +32,8 @@ removed, and new one created.
 /tmp/X0/xauthority	-> authentication cookie
 /tmp/X0/xinitrc		-> xinitrc
 /tmp/X0/xorg.log	-> standard X log
-/tmp/X0/xorg-stdout.log	-> console messages from X
+/tmp/X0/xorg.stdout	-> console messages from X
 ```
-
-The `X0` means "X display 0".
   
 #### 2. `dbus` - for the browser
 
@@ -43,7 +41,7 @@ Unfortunately, user's session dbus daemon is needed for the browser to obtain
 links from apps, or for some other bigger/container apps to interact with each
 other.  Otherwise it is not needed.
 
-The environbent variable `$DBUS_SESSION_BUS_ADDRESS` needs to be exported to
+The environment variable `$DBUS_SESSION_BUS_ADDRESS` needs to be exported to
 define the path to a socket file.  The standard location
 `DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$UID/bus"` is not reliable
 (might be missing), so we use our `/tmp/X0/dbus` instead.
@@ -56,9 +54,76 @@ into `/tmp/X0/dbus.log`, instead of the default syslog.
 <i> Unfortunately, the `DBUS_SESSION_BUS_ADDRESS` name was chosen as the
 standard, instead of a simple `DBUS`. </i>
 
-#### 3. `xauthority` - authentication cookie
+#### 3. `pulseaudio` - for the browser
 
-Authentication cookie file is used to secure the X acces to only a single user.
+Unfortunately, a running audio server is needed for applications to be able to
+play sound or just to not hang.  Often, `pulseaudio` is required.  Pulseaudio
+saves its runtime stuff to `~/.config/pulse`, to `/var/run/user/ID/pulse` plus
+syslog or journal.  To move it to `/tmp/pulse` we need to set
+`PULSE_RUNTIME_PATH` and `XDG_CONFIG_HOME` and let pulseaudio clients know it in
+the `/etc/pulse/clients.conf`:
+
+```
+extra-arguments = --log-target=stderr
+cookie-file = /tmp/pulse/cookie
+```
+
+Main pulseaudio runtime files will be:
+
+```
+/tmp/pulse/cookie	-> authentication cookie
+/tmp/pulse/socket	-> sound server socket
+/tmp/pulse/pulse.log	-> sound server log file
+/tmp/pulse/pid		-> sound server PID
+```
+
+We chosen `/tmp/pulse` instead of `/tmp/X0/pulse`, as the pulseaudio is
+potentially independent from X.  Also, this path has to be referenced as a
+string in `/etc/pulse/client.conf` and `/etc/pulse/default.pa`, which further
+supports the simpler path choice.
+
+The pulseaudio `--log-target=file` uses some logic to handle things, to avoid
+to work around it we rather use the `--daemonize=no --log-target=stderr` and
+point STDERR to a file.
+
+Similarly to step 4. we can grant a group access to the `pulseaudio` by
+changing the `/tmp/pulse` permissions, but we also need to negotiate common
+socket file location by adding this line to `/etc/pulse/clients.conf`:
+
+```
+default-server = unix:/tmp/pulse/socket
+```
+
+and this line to `/etc/pulse/default.pa`:
+
+```
+load-module module-native-protocol-unix auth-anonymous=1 socket=/tmp/pulse/socket
+```
+
+To use the `/tmp/pulse/cookie` instead of creating new one in
+`~/.config/pulse/cookie` the other users have to set the `$XDG_CONFIG_HOME` in
+`.bashrc` or `.zshrc`:
+
+```
+export XDG_CONFIG_HOME=/tmp
+```
+
+Any custom pulseaudio setup, which will otherwise go into `~/config/pulse`
+needs to be copied in the xx script to the `/tmp/pulse` similarly to the
+xinitrc file from step 6.  Alternatively, things can be set directly in
+`/etc/pulse` files.
+
+On Ubuntu or other systemd based systems the pulseaudio daemon is started on
+user's login, to stop it and use only the xx pulseaudio do something like:
+
+```
+ln -sf /dev/null /etc/systemd/user/default.target.wants/pulseaudio.service
+ln -sf /dev/null /etc/systemd/user/sockets.target.wants/pulseaudio.socket
+```
+
+#### 4. `xauthority` - authentication cookie
+
+Authentication cookie file is used to secure the X access to only a single user.
 User-run applications can use the X only if they can read the cookie file.  In
 this script, we can use the same cookie file for the X server and for the
 client (user application), because we expect the server to be run by the user
@@ -68,7 +133,7 @@ Location of the cookie file is revealed to clients by the `XAUTHORITY`
 environment variable, and to the X server by the `-auth` switch.  Without the
 `touch $XAUTHORITY` the `xx` will work but complain.  Without the manual
 `xauth` setup, X will create and use the `~/.Xauthority` file.  For the host
-based access the default `600` permisions set by `xauth` need to be owerriden
+based access the default `600` permissions set by `xauth` need to be overridden
 to allow other users to read the cookie too by adding: `chmod 644 $XAUTHORITY`
 to the `xx` script.
 
@@ -83,19 +148,24 @@ chgrp xorg $XAUTHORITY
 chmod 640 $XAUTHORITY
 ```
 
-<i> Why to have more users to share a single X session?  In opposition to the
-trend of forcing multiuser operating system to accept only a single user, it
-actually become advantageous for a single human to use multiple user accounts
-in parallel.  Modern applications tend to automatically store settings,
-profiles, states, caches, dependencies for a particular human and they modify
-their functionality accordingly.  However, we humans are not so simple!  Ones
-we are at work, other times not!  We might work on three completely different
-projects requiring to use tools in different way.  We might want apps to
-remember different coworkers for diffelent projets, etc...  Then multiple user
-accounts for a single human can help!  And also being able to open windows from
-two accounts at the same time to be able to copy-paste is useful... </i>
+The `ssh -X/Y` from remote to this host will create its own `~/.Xauthority`
+cookie on this host.  This cookie is different from `/tmp/X0/xauthority`, it is
+unique for every ssh session, and you can remove it after the ssh session.
 
-#### 4. `Xorg.0.log` - X server log file
+<i> Why to have more users to share a single X session?  Modern trend is to
+force multiuser operating systems to accept only a single user, or
+support/suggest single-user usage scenarios.  However, it gradually becomes
+more advantageous for a single human to use multiple user accounts concurrently.
+Modern applications tend to automatically store settings, profiles, states,
+caches, dependencies for a particular user and to modify their own
+functionality accordingly.  But, people often work on several completely
+different projects requiring to use tools in different ways, remember different
+coworkers, different passwords, bookmarks, folders, etc.  Multiple user
+accounts for a single human can help!  To fully use the advantage of multiple
+accounts you need to be able to open windows from two accounts at the same time
+to copy-paste, compare, etc. ...and it is easy! </i>
+
+#### 5. `Xorg.0.log` - X server log file
 
 The default location of user-run X server is in the user's home directory
 `~/.local/share/xorg/Xorg.0.log`.  This path is hardcoded in the X server
@@ -108,30 +178,31 @@ The log file of the root-run X, can be stored in the `/tmp/X0` using the
 
 <i> TODO: Hack the X server to allow to log directly to the `/tmp/X0` as user.</i>
 
-#### 5. `xinitrc` - which window manager to start
+#### 6. `xinitrc` - which window manager to start
 
 In this step we just copy the `~/.xinitrc` to our runtime directory `/tmp/X0`.
 However, instead of this copying, the xinitrc content can be generated on the
-fly in the `xx` script to cantain whole X setup in a single file.  Like this:
+fly in the `xx` script to contain the whole X setup in a single file.  Like
+this:
 
 ```
 echo "setxkbmap dvorak"    > $XINITRC
 echo "fvwm -f ~/.fvwmcfg" >> $XINITRC
 ```
 
-Another mechanism to setup X are the `/usr/share/X11/xorg.conf.d` files.
+Another mechanism to set up the X are the `/usr/share/X11/xorg.conf.d` files.
 However, some things have to be set by the xinitrc even if they are already set
-in xorg.conf.  For instance, if the keyboard is only set in xorg.conf, the
-window manager which is run from the xinitrc might not get the keyboard
-correctly configured in the time it is initialized.
+in xorg.conf.  For instance, if keyboard is configured only in the xorg.conf,
+then the window manager which is run from the xinitrc might not have the
+keyboard correctly configured in the time it is initialized.
 
-#### 6. `Xorg` - start the X server
+#### 7. `Xorg` - start the X server
 
-Here we run the X server `Xorg` throgh the `xinit` program for the display `:0`
+Here we run the X server `Xorg` through the `xinit` program for the display `:0`
 reusing the current virtual console.  We also log the X servers stdout messages
-to the `xorg-stdout.log` alongside its logfile `xorg.log`.
+to the `xorg.stdout` alongside its logfile `xorg.log`.
 
-#### 7. cleanup at exit
+#### 8. cleanup at exit
 
 In this step we clean up everything what we created for the X to run:
 
@@ -150,14 +221,27 @@ stored in `/var/log/Xorg.0.log` and can be removed only by root.
  2. `make install` to copy the `xx` to `~/bin`.
 
 Alternatively use `make install4group` or `make install4host` to install the
-modified `xx` for a group-based or for host-based authentication.  By default
-the single-user authentication mode is provided.
+modified `xx` for a group-based or for host-based access.  Default is the
+single-user access mode.
+
+### Group-based access
+
+The X and pulseaudio group-based access used in steps 3 and 4 has the
+primary-secondary roles: initiating user is the primary one with write
+privileges, other users in the `xorg` group are secondary with only the read
+access.  Instead of the `xorg`, a good name for the group would be the name of
+primary user.
+
+### `/tmp` directory
+
+We try to put all X and pulseaudio runtime data to the `/tmp` and remove it at
+end of session.  This way we achieve:
+
+ * no waste data are stored,
+ * data are together, easier to inspect!
 
 ### Limitations
 
-The `xx` is written only for the display `:0`.
-
-If you need the `~/.Xauthority` file for the `ssh` from remote to allow to run
-x commands, use: `ln -s /tmp/X0/xauthority ~/.Xauthority`.
+This `xx` is written only for the display `:0`.
 
 <br><div align=right><i>R.Jaksa 2023,2024</i></div>

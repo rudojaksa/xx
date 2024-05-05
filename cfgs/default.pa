@@ -1,0 +1,3 @@
+# add this line to /etc/pulse/default.pa file, see `man default.pa`
+# or replace existing module-native-protocol-unix line
+load-module module-native-protocol-unix auth-anonymous=1 socket=/tmp/pulse/socket

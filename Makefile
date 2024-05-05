@@ -1,7 +1,8 @@
 PACKAGE	:= xx
-VERSION	:= 0.4
+VERSION	:= 0.5
 AUTHOR	:= R.Jaksa 2023,2024 GPLv3
-SUBVERSION := 
+SUBVERSION :=
+PKGNAME := xx-$(VERSION)$(SUBVERSION)
 
 all:
 	@echo -e "\nto install choose:\n"
@@ -11,20 +12,28 @@ all:
 	@echo
 
 # install to the private bin
-install: xx
-	cat xx | \
-	sed 's:\(from the text console\):\1 (version xx-$(VERSION)$(SUBVERSION)):' > ~/bin/xx
+install: xx.tmp
+	sed -i -z 's:\n#[GH]#[^\n]*::g' $<
+	mv $< ~/bin/xx
 
-# install the group-based access version
-install4group: xx
-	sed -z 's:\n\n# 4.:\nchgrp xorg $$XAUTHORITY; chmod 640 $$XAUTHORITY\n\n# 4.:' xx | \
-	sed 's:\(from the text console\):\1 (version xx-$(VERSION)$(SUBVERSION)):' > ~/bin/xx
+# install the group-based-access version
+install4group: xx.tmp
+	sed -i -z 's:\n#H#[^\n]*::g' $<
+	sed -i 's:^#G# *::g' $<
+	mv $< ~/bin/xx
 
-# install the host-based access version
-install4host: xx
-	sed -z 's:\n\n# 4.:\nchmod 644 $$XAUTHORITY\n\n# 4.:' xx | \
-	sed 's:\(from the text console\):\1 (version xx-$(VERSION)$(SUBVERSION)):' > ~/bin/xx
+# install the host-based-access version
+install4host: xx.tmp
+	sed -i -z 's:\n#G#[^\n]*::g' $<
+	sed -i 's:^#H# *::g' $<
+	mv $< ~/bin/xx
+
+# add version name to the installed script
+xx.tmp: xx Makefile
+	sed 's:\(from the text console\):\1 (version $(PKGNAME)):' $< > $@
+	chmod 755 $@
 
 clean:
+	rm -f xx.tmp
 
 -include ~/.github/Makefile.git

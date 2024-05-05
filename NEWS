@@ -1,2 +1,8 @@
+0.5 - added pulseaudio starting to this script
+    - better group/host-access handling in Makefile
+    - add demo config files to cfgs
+    - README corrections
+    - making dbus start through dbusrc
+    - removing /tmp/X0-user option to simplify the script
 0.4 - better dbus-daemon, solves missing /run/user/uid
     - further simplified script
