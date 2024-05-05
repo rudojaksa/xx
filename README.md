@@ -240,6 +240,13 @@ end of session.  This way we achieve:
  * no waste data are stored,
  * data are together, easier to inspect!
 
+### `rc` files
+
+The `dbusrc` and `pulserc` files for the startup of daemons daemons allow the
+"fire-and-forget" approach.  If something in these less-important services
+fails, it will not stop the X from start, if something takes too long, it will
+not slowdown the main routine.
+
 ### Limitations
 
 This `xx` is written only for the display `:0`.
