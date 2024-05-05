@@ -45,4 +45,4 @@ pkill -9 pulseaudio
 rm -rvf /tmp/pulse /tmp/pulse-*
 rm -rvf /tmp/.X0-lock $XDIR
 
-# R.Jaksa 2023,2024
+# R.Jaksa 2023,2024 GPLv3
