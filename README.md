@@ -1,7 +1,7 @@
 # `xx` - the X server starting script
 
 Minimal script to start the X server manually from the text console (a lot
-simplified customization-friendly alternative to the startx).
+simplified annotated customization-friendly alternative to the startx).
 
 <h3 align="center">
 <tt>&nbsp;boot to console&nbsp;</tt> &nbsp;&rarr;&nbsp;
