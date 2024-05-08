@@ -15,8 +15,8 @@ bash $XDIR/dbusrc &
 pkill -9 pulseaudio
 mkdir -p /tmp/pulse
 echo "XDG_CONFIG_HOME=/tmp PULSE_RUNTIME_PATH=/tmp/pulse pulseaudio --exit-idle-time=-1 --daemonize=no --log-time --log-target=stderr 2>/tmp/pulse/pulse.log &" > /tmp/pulse/pulserc
-#G# echo "sleep 1; chgrp xorg /tmp/pulse; chmod 750 /tmp/pulse" >> /tmp/pulse/pulserc
-#H# echo "sleep 1; chmod 755 /tmp/pulse" >> /tmp/pulse/pulserc
+#G# echo "sleep 1; chgrp xorg /tmp/pulse /tmp/pulse/cookie; chmod 750 /tmp/pulse; chmod 640 /tmp/pulse/cookie" >> /tmp/pulse/pulserc
+#H# echo "sleep 1; chmod 755 /tmp/pulse; chmod 644 /tmp/pulse/cookie" >> /tmp/pulse/pulserc
 bash /tmp/pulse/pulserc &
 
 # 4. create and save authentication cookie and provide XAUTHORITY envvar

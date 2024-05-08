@@ -251,4 +251,8 @@ will not slow down the main routine.
 
 This `xx` is written only for the display `:0`.
 
+### See also
+
+https://gitlab.freedesktop.org/xorg/app/xinit &larr; startx & xinit sources  
+
 <br><div align=right><i>R.Jaksa 2023,2024</i></div>
