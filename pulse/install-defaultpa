@@ -1,0 +1,26 @@
+#!/bin/bash
+
+SOURCE=cfgs/default.pa
+TARGET=/etc/pulse/default.pa
+TMP=/tmp/default.pa
+PATTERN="load-module module-native-protocol-unix auth-anonymous=1 socket=/tmp/pulse/socket"
+PATTERN2="load-module module-native-protocol-unix"
+
+# the default-server line already there
+if test ! -d /etc/pulse; then exit; fi
+if test -f $TARGET && grep -q -F "$PATTERN" $TARGET; then exit; fi
+
+# ask for appraval and install
+echo
+read -p "append a /tmp/pulse line to $TARGET? [Y/n] " ok
+if test x$ok == xn; then exit; fi
+
+# remove all module-native-protocol-unix lines, add the final line, overwrite
+grep -v "$PATTERN2" $TARGET > $TMP
+echo "$PATTERN" >> $TMP
+cat $TMP > $TARGET
+rm $TMP
+
+# return fail if failed
+if grep -q -F "$PATTERN" $TARGET; then echo success; else echo; exit 1; fi
+

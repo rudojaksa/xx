@@ -1,0 +1,21 @@
+#!/bin/bash
+
+SOURCE=cfgs/client.conf
+TARGET=/etc/pulse/client.conf
+PATTERN="default-server = unix:/tmp/pulse/socket"
+
+# the default-server line already there
+if test ! -d /etc/pulse; then exit; fi
+if test -f $TARGET && grep -q -F "$PATTERN" $TARGET; then exit; fi
+
+# ask for appraval and install
+echo
+read -p "install $SOURCE to $TARGET? [Y/n] " ok
+if test x$ok == xn; then exit; fi
+
+# overwrite the file
+cp -v $SOURCE $TARGET
+
+# return fail if failed
+if cmp -s $SOURCE $TARGET; then :; else echo; exit 1; fi
+

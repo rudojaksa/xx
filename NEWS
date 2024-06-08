@@ -1,3 +1,6 @@
+0.7 - automatic install of pulseaudio configs
+    - skip pulseaudio section if /etc/pulse not present
+    - run cleanup commands in background
 0.6 - fixed /tmp/pulse/cookie permissions
 0.5 - added pulseaudio starting to this script
     - better group/host-access handling in Makefile

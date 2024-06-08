@@ -1,11 +1,12 @@
 #!/bin/bash
 # script to start the X manually by the user from the text console
+# uncomment #G# for group-based acces, #H# for host-based access
 
 # 1. set our runtime/logdir for the X display :0
 XDIR=/tmp/X0
 mkdir -p $XDIR
 
-# 2. session dbus for a browser to exchange links with apps and own windows
+# 2. session-dbus for a browser to exchange links with apps and own windows
 export DBUS_SESSION_BUS_ADDRESS="unix:path=$XDIR/dbus"
 kill -9 `ps x | grep dbus-daemon | grep $DBUS_SESSION_BUS_ADDRESS | xargs | cut -d ' ' -f 1` 2>/dev/null
 echo "dbus-daemon --session --nofork --nopidfile --nosyslog --address=$DBUS_SESSION_BUS_ADDRESS &> $XDIR/dbus.log &" > $XDIR/dbusrc
@@ -40,9 +41,9 @@ VT=vt`tty | grep -oE '[0-9]+$'` # identify VT
 xinit $XINITRC -- /usr/lib/xorg/Xorg -nolisten tcp :0 $VT -keeptty -auth $XAUTHORITY > $XDIR/xorg.stdout 2>&1
 
 # 8. cleanup after the Xorg is closed
-kill -9 `ps x | grep dbus-daemon | grep $DBUS_SESSION_BUS_ADDRESS | xargs | cut -d ' ' -f 1`
-pkill -9 pulseaudio
-rm -rvf /tmp/pulse /tmp/pulse-*
-rm -rvf /tmp/.X0-lock $XDIR
+kill -9 `ps x | grep dbus-daemon | grep $DBUS_SESSION_BUS_ADDRESS | xargs | cut -d ' ' -f 1` &
+pkill -9 pulseaudio &
+rm -rvf /tmp/pulse /tmp/pulse-* &
+rm -rvf /tmp/.X0-lock $XDIR &
 
 # R.Jaksa 2023,2024 GPLv3

@@ -1,7 +1,8 @@
 # `xx` - the X server starting script
 
-Minimal script to start the X server manually from the text console (a lot
-simplified annotated customization-friendly alternative to the startx).
+Minimal script to start the X server (and audio server) manually from the text
+console (simplified annotated customization-friendly alternative to the
+startx).
 
 <h3 align="center">
 <tt>&nbsp;boot to console&nbsp;</tt> &nbsp;&rarr;&nbsp;
@@ -9,17 +10,22 @@ simplified annotated customization-friendly alternative to the startx).
 <tt>&nbsp;run xx&nbsp;</tt> &nbsp; &nbsp; &nbsp; </h3>
 
 The `xx` name is convenient when it has to be typed from a misconfigured
-keyboard after arbitrary boot problem.  Single `x` would be even simpler, but
-it would be also prone to launch unintentionally.  The `xx` script itself does:
+keyboard after an arbitrary boot problem.  Single `x` would be even simpler,
+but it would be also prone to launch unintentionally.  The `xx` script itself
+does:
 
 1. Creates the session data directory `/tmp/X0`.
-2. Starts user's dbus for the browser to work correctly.
+2. Starts the user's dbus for the browser to work correctly.
 3. Starts user's pulseaudio sound server.
 4. Sets the xauthority authentication cookie for X.
 5. Moves the `Xorg.0.log` to `/tmp/X0`.
 6. Makes temporary xinitrc to start a window manager.
 7. Runs the X server.
 8. Removes all session data after the X is closed.
+
+The graphics and audio servers are the foundation of the computer desktop, step
+one.  This script tries to handle them transparently.  And the dbus is an
+addition.
 
 #### 1. `/tmp/X0` - runtime data and logs
 
@@ -56,12 +62,15 @@ standard, instead of a simple `DBUS`. </i>
 
 #### 3. `pulseaudio` - for the browser
 
-Unfortunately, a running audio server is needed for applications to be able to
-play sound or just to not hang.  Often, `pulseaudio` is required.  Pulseaudio
-saves its runtime stuff to `~/.config/pulse`, to `/var/run/user/ID/pulse` plus
-syslog or journal.  To move it to `/tmp/pulse` we need to set
-`PULSE_RUNTIME_PATH` and `XDG_CONFIG_HOME` and let pulseaudio clients know it in
-the `/etc/pulse/clients.conf`:
+Unfortunately, the X server is not enough and one more running server is
+needed: the audio server.  Typically, the `pulseaudio` is required by applications.
+It would be nice if applications don't hang up if the audio server is not
+running...
+
+Pulseaudio stores its runtime stuff in `~/.config/pulse`, in
+`/var/run/user/ID/pulse` plus logs in syslog or journal.  To move all these
+files to `/tmp/pulse` we need to set `PULSE_RUNTIME_PATH` and `XDG_CONFIG_HOME`
+and let pulseaudio clients know about it using the `/etc/pulse/clients.conf`:
 
 ```
 extra-arguments = --log-target=stderr
@@ -78,17 +87,20 @@ Main pulseaudio runtime files will be:
 ```
 
 We chose `/tmp/pulse` instead of `/tmp/X0/pulse`, as the pulseaudio is
-potentially independent from X.  Also, this path has to be referenced as a
-string in `/etc/pulse/client.conf` and `/etc/pulse/default.pa`, which further
-supports the simpler path choice.
+potentially independent of X.  Also, this path has to be referenced as a string
+in `/etc/pulse/client.conf` and `/etc/pulse/default.pa`, so the simple
+independent path would be the best choice.
 
-The pulseaudio `--log-target=file` uses some logic to handle things, to avoid
-to work around it we rather use the `--daemonize=no --log-target=stderr` and
-point STDERR to a file.
+Regarding logs, the pulseaudio `--log-target=file` wraps some logic over the
+"file".  To avoid working around it, the `--daemonize=no --log-target=stderr`
+can be used with a redirect of stderr to a file.
 
-Similarly to step 4. we can grant a group access to the `pulseaudio` by
-changing the `/tmp/pulse` permissions, but we also need to negotiate common
-socket file location by adding this line to `/etc/pulse/clients.conf`:
+##### Authentication
+
+Similarly to the X authentication in section 4. we can grant a group access to
+the `pulseaudio` by changing the `/tmp/pulse` permissions, but we also need to
+negotiate the common socket file location by adding this line to the
+`/etc/pulse/clients.conf`:
 
 ```
 default-server = unix:/tmp/pulse/socket
@@ -100,6 +112,11 @@ and this line to `/etc/pulse/default.pa`:
 load-module module-native-protocol-unix auth-anonymous=1 socket=/tmp/pulse/socket
 ```
 
+This `clients.conf` and `default.pa` setup is done automatically by the `make
+install` with an interactive approval.
+
+##### Multi-user access
+
 To use the `/tmp/pulse/cookie` instead of creating a new one in
 `~/.config/pulse/cookie` the other users have to set the `$XDG_CONFIG_HOME` in
 `.bashrc` or `.zshrc`:
@@ -108,12 +125,14 @@ To use the `/tmp/pulse/cookie` instead of creating a new one in
 export XDG_CONFIG_HOME=/tmp
 ```
 
-Any custom pulseaudio setup, which will otherwise go into `~/config/pulse`
-needs to be copied in the xx script to the `/tmp/pulse`, similarly to the
-xinitrc file from step 6.  Alternatively, things can be set directly in
+##### System setup
+
+Any custom pulseaudio setup, which will otherwise go into `~/.config/pulse`
+needs to be copied by the xx script to the `/tmp/pulse`, similar to the xinitrc
+file in step 6.  Alternatively, pulseaudio setup can be done system-wide in the
 `/etc/pulse` files.
 
-On Ubuntu or other systemd based systems, the pulseaudio daemon is started on
+On Ubuntu or other systemd-based systems, the pulseaudio daemon is started on
 user's login, to stop it and use only the xx pulseaudio do something like:
 
 ```
@@ -204,10 +223,12 @@ messages to the `xorg.stdout` alongside its logfile `xorg.log`.
 
 #### 8. cleanup at exit
 
-In this step, we clean up everything that we created for the X to run:
+In this step, we clean up everything that was created for the X to run:
 
  * kill the dbus daemon,
  * remove all runtime and log files, all of which we placed into `/tmp/X0`.
+
+Removal commands are run in background to not block anything.
 
 The X server also creates `/tmp/.X11-unix` and `/tmp/.ICE-unix` which we cannot
 remove due to their root privileges.  Also, if the X is run as root the log is
@@ -217,14 +238,28 @@ stored in `/var/log/Xorg.0.log` and can be removed only by root.
 
 ### Install
 
- 1. Edit the `xinitrc` part of `xx`, see section 5.,
- 2. `make install` to copy the `xx` to `~/bin`.
+Simply:
+```
+make install
+```
 
-Alternatively, use `make install4group` or `make install4host` to install the
-modified `xx` for group-based or host-based access.  The default is single-user
-access mode.
+Provided Makefile can install the `xx` script to the private `~/bin` directory:
 
-### Group-based access
+ 1. Edit your `~/.xinitrc`, or the section 6. of `xx`,
+ 2. `make install` to copy the `xx` to `~/bin`, or `sudo make install` if needed to modify `/etc/pulse`.
+
+Alternatively:
+
+ * use `make install4group` to install the modified `xx` for group-based access,
+ * or `make install4host` for host-based access.
+ * The default is a single-user access mode.
+
+For the system-wide install:
+
+ 1. use `make install` or install4group/install4host to prepare the `xx` in `~/bin`,
+ 2. then move it to the system `/bin` or elsewhere.
+
+##### Group-based access
 
 The X and pulseaudio group-based access used in steps 3 and 4 has the
 primary-secondary roles: the initiating user is the primary one with the write
@@ -234,22 +269,22 @@ primary user.
 
 ### `/tmp` directory
 
-We try to put all X and pulseaudio runtime data to the `/tmp` and remove it at
-the end of the session.  This way we achieve:
+`Xx` tries to put all X and all pulseaudio runtime data into `/tmp` and remove
+them at the end of the session.  This way:
 
  * no waste data are stored,
  * data are together, easier to inspect!
 
-### `rc` files
+### `rc` startup files
 
-The `dbusrc` and `pulserc` files for the startup of daemons daemons allow the
-"fire-and-forget" approach.  If something in these less-important services
-fails, it will not stop the X from starting, if something takes too long, it
-will not slow down the main routine.
+The `dbusrc` and `pulserc` files for the startup of daemons allow the
+"fire-and-forget" approach.  If something in these "less-important" services
+fails, it will not stop the X from starting.  If something takes too long, it
+will not slow-down the main routine.
 
 ### Limitations
 
-This `xx` is written only for the display `:0`.
+`Xx` is written only for the display `:0`.
 
 ### See also
 
